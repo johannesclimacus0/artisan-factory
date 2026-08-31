@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace JohannesClimacus\ArtisanFactory;
 
 use Illuminate\Support\ServiceProvider;
@@ -17,7 +19,7 @@ class ArtisanFactoryServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (!$this->app->runningInConsole()) {
+        if (! $this->app->runningInConsole()) {
             return;
         }
 
@@ -26,8 +28,7 @@ class ArtisanFactoryServiceProvider extends ServiceProvider
         ]);
 
         $this->publishes([
-            __DIR__.'/../config/factory-create.php'
-            => config_path('factory-create.php')
+            __DIR__.'/../config/factory-create.php' => config_path('factory-create.php')
         ], 'factory-create-config');
     }
 }
