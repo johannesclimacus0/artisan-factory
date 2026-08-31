@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace JohannesClimacus\ArtisanFactory\Commands;
 
 use Illuminate\Console\Attributes\Description;
@@ -23,37 +25,48 @@ class FactoryCreateCommand extends Command
 {
     public function handle(): int
     {
-        $modelName = (string) $this->argument('model');
-        $modelNamespace = (string) config('factory-create.model_namespace',
-            'App\\Models'
-        );
-        $modelClass = $modelNamespace . '\\' .$modelName;
+        $modelArgument = $this->argument('model');
 
-        $attributeOptions = (array) $this->option('set');
-
-        $count = (int) $this->option('count');
-        $states = (array) $this->option('state');
-        $maxCount = (int) config('factory-create.max_count', 20);
-
-        if ($count < 1 || $count > config('factory-create.max_count', 20)) {
-            $this->error('Count must be between 1 and ' . $maxCount . '.');
+        if (! is_string($modelArgument)) {
+            $this->error('Model name must be a string.');
 
             return self::FAILURE;
         }
 
-        if (!class_exists($modelClass)) {
+        $modelName = $modelArgument;
+        $modelNamespace = (string) config('factory-create.model_namespace',
+            'App\\Models'
+        );
+        $modelClass = $modelNamespace.'\\'.$modelName;
+
+        /** @var array<int, string> $attributeOptions */
+        $attributeOptions = (array) $this->option('set');
+
+        $count = (int) $this->option('count');
+        $maxCount = (int) config('factory-create.max_count', 20);
+
+        /** @var array<int, string> $states */
+        $states = (array) $this->option('state');
+
+        if ($count < 1 || $count > config('factory-create.max_count', 20)) {
+            $this->error('Count must be between 1 and '.$maxCount.'.');
+
+            return self::FAILURE;
+        }
+
+        if (! class_exists($modelClass)) {
             $this->error("Model '{$modelName}' does not exist.");
 
             return self::FAILURE;
         }
 
-        if (!is_subclass_of($modelClass, Model::class)) {
+        if (! is_subclass_of($modelClass, Model::class)) {
             $this->error("Class '{$modelClass}' is not an Eloquent model.");
 
             return self::FAILURE;
         }
 
-        if (!method_exists($modelClass, 'factory')) {
+        if (! method_exists($modelClass, 'factory')) {
             $this->error("Model '{$modelName}' must have a factory.");
 
             return self::FAILURE;
@@ -65,7 +78,7 @@ class FactoryCreateCommand extends Command
             $factory = $modelClass::factory();
 
             foreach ($states as $state) {
-                if (!$this->isAllowedFactoryState($factory, $state)) {
+                if (! $this->isAllowedFactoryState($factory, $state)) {
                     $this->error("Factory state '{$state}' is not found for model '{$modelName}'.");
 
                     return self::FAILURE;
@@ -73,7 +86,7 @@ class FactoryCreateCommand extends Command
 
                 $result = $factory->{$state}();
 
-                if (!$result instanceof Factory) {
+                if (! $result instanceof Factory) {
                     $this->error("Factory state '{$state}' must return a factory instance.");
 
                     return self::FAILURE;
@@ -85,6 +98,10 @@ class FactoryCreateCommand extends Command
                 ->count($count)
                 ->create($attributes);
 
+            if ($models instanceof Model) {
+                $models = new Collection([$models]);
+            }
+
             $this->displayCreatedModels($models);
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
@@ -92,14 +109,17 @@ class FactoryCreateCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info("Created {$models->count()} {$modelName} record" . ($models->count() === 1 ? '.' : 's.'));
+        $this->info("Created {$models->count()} {$modelName} record".($models->count() === 1 ? '.' : 's.'));
 
         return self::SUCCESS;
     }
 
+    /**
+     * @param  Factory<Model>  $factory
+     */
     private function isAllowedFactoryState(Factory $factory, string $state): bool
     {
-        if (!method_exists($factory, $state)) {
+        if (! method_exists($factory, $state)) {
             return false;
         }
 
@@ -107,18 +127,21 @@ class FactoryCreateCommand extends Command
 
         return
             $method->isPublic()
-            && !$method->isStatic()
+            && ! $method->isStatic()
             && $method->getNumberOfRequiredParameters() === 0
             && $method->getDeclaringClass()->getName() === $factory::class;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * @param  array<int, string>  $options
+     * @return array<string, mixed>
+     */
     private function parseAttributes(array $options): array
     {
         $attributes = [];
 
         foreach ($options as $option) {
-            if (!str_contains($option, '=')) {
+            if (! str_contains($option, '=')) {
                 throw new InvalidArgumentException(
                     "Attribute '{$option}' must be of a key=value format."
                 );
@@ -132,6 +155,7 @@ class FactoryCreateCommand extends Command
                     'Attribute must not be empty.'
                 );
             }
+
             if (array_key_exists($key, $attributes)) {
                 throw new InvalidArgumentException(
                     "Attribute '{$key}' was provided more than once."
@@ -154,8 +178,10 @@ class FactoryCreateCommand extends Command
         };
     }
 
-    /**@param Collection<int, Model> $models */
-    private function displayCreatedModels(Collection $models)
+    /**
+     * @param  Collection<int, Model>  $models
+     */
+    private function displayCreatedModels(Collection $models): void
     {
         $rows = $models->values()
             ->map(function (Model $model, int $index): array {
