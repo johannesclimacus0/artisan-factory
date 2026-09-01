@@ -19,6 +19,11 @@ final class TestUser extends Model
         'email_verified_at' => 'immutable_datetime'
     ];
 
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
     protected static function newFactory(): TestUserFactory
     {
         return TestUserFactory::new();

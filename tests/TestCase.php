@@ -36,9 +36,18 @@ abstract class TestCase extends Orchestra
     {
         Schema::create('test_users', function (Blueprint $table): void {
             $table->id();
+            $table->uuid('uuid')->unique();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('test_posts', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('test_user_id')->constrained('test_users');
+            $table->foreignId('sender_id')->constrained('test_users');
+            $table->string('title');
             $table->timestamps();
         });
     }
