@@ -3,6 +3,7 @@
 namespace JohannesClimacus\ArtisanFactory\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use JohannesClimacus\ArtisanFactory\Tests\Support\Models\TestPost;
 use JohannesClimacus\ArtisanFactory\Tests\Support\Models\TestUser;
 use JohannesClimacus\ArtisanFactory\Tests\TestCase;
 
@@ -59,6 +60,67 @@ class FactoryCreateCommandTest extends TestCase
         $this->assertSame('a=b', $user->name);
         $this->assertSame('test@example.org', $user->email);
         $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_command_displays_created_model_details(): void
+    {
+        $this->artisan('factory:create', [
+            'model' => 'TestUser',
+            '--state' => ['unverified'],
+            '--set' => [
+                'name=Test User',
+                'email=test@example.org'
+            ],
+            '--details' => true
+        ])
+            ->expectsOutputToContain('TestUser #1')
+            ->expectsOutputToContain('Test User')
+            ->expectsOutputToContain('test@example.org')
+            ->expectsOutputToContain('NULL')
+            ->assertSuccessful();
+    }
+
+    public function test_command_creates_model_for_inferred_and_explicit_relations(): void
+    {
+        $owner = TestUser::factory()->create();
+        $sender = TestUser::factory()->create();
+
+        $this->artisan('factory:create', [
+            'model' => 'TestPost',
+            '--for' => [
+                'TestUser:'.$owner->uuid,
+                'sender=TestUser:'.$sender->uuid
+            ],
+            '--set' => ['title=Related post']
+        ])->assertSuccessful();
+
+        $post = TestPost::query()->sole();
+
+        $this->assertTrue($post->testUser->is($owner));
+        $this->assertTrue($post->sender->is($sender));
+        $this->assertSame('Related post', $post->title);
+    }
+
+    public function test_command_rejects_invalid_relation_format(): void
+    {
+        $this->artisan('factory:create', [
+            'model' => 'TestPost',
+            '--for' => ['TestUser']
+        ])
+            ->expectsOutput("Relation 'TestUser' must use Model:route-key format.")
+            ->assertFailed();
+
+        $this->assertSame(0, TestPost::query()->count());
+    }
+
+    public function test_command_fails_when_related_record_does_not_exist(): void
+    {
+        $this->artisan('factory:create', [
+            'model' => 'TestPost',
+            '--for' => ['TestUser:missing-uuid']
+        ])->assertFailed();
+
+        $this->assertSame(0, TestPost::query()->count());
     }
 
     public function test_command_rejects_count_below_one(): void

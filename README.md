@@ -1,9 +1,7 @@
 # Artisan Factory
 
-Набросок, прототип, макет - как угодно. Пакет позволяющий запускать фабрики через Artisan, чтобы лишний раз не лезть в Tinker.
+Пакет позволяет запускать фабрики Eloquent через Artisan без использования Tinker.
 
-Писалось на скорую руку и для собственного удобства. Функционал минимален, не совсем продуман. Вся логика собрана в одном файле.
-В дальнейшем код будет нормально разнесён по классам, отрефакторен и в целом приведён в более приличный вид.
 ## Требования
 
 - PHP 8.3+
@@ -11,44 +9,65 @@
 
 ## Установка
 
-```
+```bash
 composer require johannesclimacus/artisan-factory --dev
 ```
-
 
 ## Примеры использования
 
 Создать одну запись:
 
-```
+```bash
 php artisan factory:create User
 ```
 
 Создать несколько записей:
 
-```
+```bash
 php artisan factory:create User --count=5
 ```
 
 Применить состояние фабрики:
 
-```
+```bash
 php artisan factory:create User --state=unverified
 ```
 
 Переопределить атрибуты фабрики:
 
-```
+```bash
 php artisan factory:create User --set="name=Test User" --set="email=test@example.com"
 ```
 
 Специальные значения null, true и false автоматически преобразуются в соответствующие PHP-значения. Всё остальное остаётся строками.
 
+Вывести все видимые атрибуты созданной модели:
+
+```bash
+php artisan factory:create User --details
+```
+
+### Связанные модели
+
+Опция `--for` передаёт существующую родительскую модель в метод `Factory::for()`.
+
+Для стандартного названия связи достаточно указать модель и её route key:
+
+```bash
+php artisan factory:create Post --for="User:1"
+```
+
+Если название связи отличается от названия модели, нужно явно указать:
+
+```bash
+php artisan factory:create HouseholdMessage --for="sender=User:1"
+```
+
 ## Конфигурация
 
 Опубликовать файл конфигурации:
 
-```
+```bash
 php artisan vendor:publish --tag=factory-create-config
 ```
 
@@ -56,7 +75,7 @@ php artisan vendor:publish --tag=factory-create-config
 
 ## Тестирование
 
-```
+```bash
 composer test
 ```
 
